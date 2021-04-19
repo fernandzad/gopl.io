@@ -17,17 +17,28 @@ import (
 func main() {
 	counts := make(map[string]int)
 	files := os.Args[1:]
+	fmt.Println(os.Args[:1])
 	if len(files) == 0 {
 		countLines(os.Stdin, counts)
 	} else {
+		filesRepeated := make([]string, 0, 10)
 		for _, arg := range files {
 			f, err := os.Open(arg)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "dup2: %v\n", err)
 				continue
 			}
-			countLines(f, counts)
+			// We check if we have some lines repeated
+			hasFileRepeated := countLines(f, counts)
+			// If so, we save it in the slice
+			if hasFileRepeated {
+				filesRepeated = append(filesRepeated, arg)
+			}
 			f.Close()
+		}
+		// Finally we print all the names that has repeated lines
+		for _, nameFile := range filesRepeated {
+			fmt.Println(nameFile)
 		}
 	}
 	for line, n := range counts {
@@ -37,11 +48,17 @@ func main() {
 	}
 }
 
-func countLines(f *os.File, counts map[string]int) {
+func countLines(f *os.File, counts map[string]int) bool {
 	input := bufio.NewScanner(f)
+	hasFileRepeated := false
 	for input.Scan() {
-		counts[input.Text()]++
+		text := input.Text()
+		counts[text]++
+		if counts[text] > 1 {
+			hasFileRepeated = true
+		}
 	}
+	return hasFileRepeated
 	// NOTE: ignoring potential errors from input.Err()
 }
 
